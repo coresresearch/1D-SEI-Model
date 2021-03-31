@@ -65,11 +65,14 @@ elif mode == 'homogeneous' or mode == 'reduced':
 
 """----------Define CV parameters:----------"""
 sweep_rate = 0.01  #...Voltage sweep rate [V/s]
+#sweep_rate = 0.005  #...Voltage sweep rate [V/s]
 sweep_dirn_0 = -1
 phi_0 = 1.0
 phi_1 = 0.05
+#phi_1 = 0.5
 phi_2 = 1.5
 n_cycles = 10.
+#n_cycles = 0.5
 
 t_hold = 0.
 phi_hold = 0.5
@@ -88,7 +91,8 @@ phi_elyte_0 = 0.
 #   file.
 rho_k_SEI = [2110, 2013, 1321]
 # Electrical Conductivity [S/m]
-sigma_el = [2*1.5e-8, 8e-8, 13e-8] #[1.5e-8, 4e-8, 9e-8]
+sigma_scale = 165/10
+sigma_el = [sigma_scale*2*1.5e-8, sigma_scale*8e-8, sigma_scale*13e-8] #[1.5e-8, 4e-8, 9e-8]
 
 # Double layer capacitances
 C_dl_WE_SEI = 2e-6  # F/m2
