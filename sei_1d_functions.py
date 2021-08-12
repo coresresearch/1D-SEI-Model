@@ -71,6 +71,8 @@ def residual_detailed(t, SV, SV_dot):
 
     i_io = np.zeros(params['Ny'] + 1, )
     i_io_sei = np.zeros(params['Ny'] + 1, )
+    vel = 0
+    Conv_sei_out = 0
 
     # Loop through the remaining volumes (except for the very last one):
     for j in range(params['Ny'] - 1):
@@ -84,6 +86,7 @@ def residual_detailed(t, SV, SV_dot):
         #       raise Exception('Please specify a valid transport model: cst or dst')
         Ck_sei_loc = Ck_sei_next
         Ck_elyte_loc = Ck_elyte_next
+        Conv_sei_in = Conv_sei_out
         # Read out local SEI composition and set Cantera object:
         Ck_sei_next = SV[SVptr['Ck sei'][j + 1]]
         Ck_elyte_next = SV[SVptr['Ck elyte'][j + 1]]
@@ -208,9 +211,7 @@ def residual_detailed(t, SV, SV_dot):
         # Need ionic current in SEI phase for interstitial Li+?
         i_io_sei[j + 1] = ct.faraday * np.dot(sei.charges, N_k_out_sei)
 
-        # Calculate residual for chemical molar concentrations:
         dSVdt_ck_sei = Rates_sei_elyte + Rates_sei + grad_Flux_sei
-        res[SVptr['Ck sei'][j]] = SV_dot[SVptr['Ck sei'][j]] - dSVdt_ck_sei
 
         # Test the git add function
         # Calculate residual for sei volume fraction:
@@ -220,7 +221,14 @@ def residual_detailed(t, SV, SV_dot):
         res[SVptr['eps sei'][j]] = SV_dot[SVptr['eps sei'][j]] #- dSVdt_eps_sei
 
         dSVdt_ck_elyte = Rates_elyte_sei + Rates_elyte + grad_Flux_elyte
+        dSVdt_eps_elyte = np.dot(dSVdt_ck_elyte, elyte.partial_molar_volumes)
         res[SVptr['Ck elyte'][j]] = SV_dot[SVptr['Ck elyte'][j]] - dSVdt_ck_elyte
+
+        vel += (dSVdt_eps_elyte + dSVdt_eps_sei)/params['dyInv']
+        Conv_sei_out = vel * Ck_sei_loc
+
+        # Calculate residual for chemical molar concentrations:
+        res[SVptr['Ck sei'][j]] = SV_dot[SVptr['Ck sei'][j]] - dSVdt_ck_sei - (Conv_sei_in - Conv_sei_out)*params['dyInv']
 
         # Calculate faradaic current density due to charge transfer at SEI-elyte
         #   interface, in A/m2 total.
@@ -284,7 +292,9 @@ def residual_detailed(t, SV, SV_dot):
     Rates_sei = np.zeros_like(SV_dot[SVptr['Ck sei'][j]]) * eps_sei_loc
     # Rates_sei = sei.get_net_production_rates(sei)*SV[SVptr['eps sei'][j]]
     # ^^ check proper implementation of multiplication by volume fraction of phase
-    dSVdt_ck_sei = Rates_sei_elyte + Rates_sei
+    # SHOULD CONVECTION FLUXES AND VELOCITY BE HANDLED DIFFERENTLY IN FINAL NODE? Conv_sei_out=0?
+    Conv_sei_out = vel * Ck_sei_loc
+    dSVdt_ck_sei = Rates_sei_elyte + Rates_sei + (Conv_sei_in - Conv_sei_out)*params['dyInv']
     res[SVptr['Ck sei'][j]] = SV_dot[SVptr['Ck sei'][j]] - dSVdt_ck_sei
 
     # Repeat calculations for elyte chemistry in final volume (has caused problems)
@@ -321,6 +331,7 @@ def residual_detailed(t, SV, SV_dot):
     # check signs--option 2:
     res[SVptr['phi elyte']] = i_io[:-1] - i_io[1:] + i_io_sei[:-1] - i_io_sei[1:] + i_sei[:-1] - i_sei[1:]
     res[SVptr['phi elyte'][-1]] = SV[SVptr['phi elyte'][-1]]
+
 
     return res
 
