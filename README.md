@@ -1,6 +1,5 @@
 # 1D-SEI-Model
 
-## D. Korff and S.C. DeCaluwe
 ### Colorado School of Mines
 
 ### *Note: A 'frozen' version of this code, used to generate the figures in the ECS Interface article from the Spring 2019 Data Science issue, is saved in the `ECS_Interface` folder.*
